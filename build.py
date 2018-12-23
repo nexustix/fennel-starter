@@ -5,19 +5,19 @@ import shutil
 from pynt import task
 
 deps = [
-    {
-    "kind":"git",
-    "name":"openautocraft",
-    "location":"https://github.com/nexustix/OpenAutocraft.git",
-    "version":"latest"},
+]
 
+def _add_depenency(id):
+    deps.append(
     {
-    "kind":"git",
-    "name":"openstoreroom",
-    "location":"https://github.com/nexustix/OpenStoreroom.git",
-    "version":"latest"},
-    ]
+        "kind":"folder",
+        "id":id,
+        "in":"./deps/"+id+"/src/"+id,
+        "out":"./src"
+    })
 
+#_add_depenency("nxgamelib")
+#_add_depenency("opticum")
 
 def _compile_fnl(src, dst):
     x = subprocess.run(["fennel", "--compile", src], capture_output=True)
@@ -49,7 +49,7 @@ def _clean_pycache():
 
 def _clean_depcopy():
     for d in deps:
-        shutil.rmtree(os.path.join("./src", d["name"]), ignore_errors=True)
+        shutil.rmtree(os.path.join("./src", d["id"]), ignore_errors=True)
 
 
 @task()
@@ -63,26 +63,24 @@ def clean():
 @task()
 def dupdate():
     '''update dependencies'''
-    _clean_depcopy()
-    os.makedirs(os.path.dirname("./deps"), exist_ok=True)
+    #_clean_depcopy()
+    #os.makedirs(os.path.dirname("./deps"), exist_ok=True)
 
     for d in deps:
-        if d["kind"] == "local":
-            pass
-        elif d["kind"] == "git":
-            print("<-> cloning " + d["location"] + " into " + os.path.join("./deps", d["name"]))
-            x = subprocess.run(["git", "clone", d["location"], os.path.join("./deps", d["name"])], capture_output=True)
+        if d["kind"] == "folder":
+            x = subprocess.run(["mkdir", "-p", os.path.join(d["out"])], capture_output=True)
+            y = subprocess.run(["cp", "-r", os.path.join(d["in"]), os.path.join(d["out"])], capture_output=True)
 
-            print("<-> moving " + os.path.join("./deps", d["name"], "src") + " to " + os.path.join("./src", d["name"]))
-            #HACK
-            y = subprocess.run(["cp", "-r", os.path.join("./deps", d["name"], "src"), os.path.join("./src", d["name"])], capture_output=True)
+        elif d["kind"] == "file":
+            x = subprocess.run(["mkdir", "-p", os.path.join(d["out"])], capture_output=True)
+            y = subprocess.run(["cp", os.path.join(d["in"]), os.path.join(d["out"])], capture_output=True)
 
 
 @task()
 def assets():
     '''copy asset folder'''
     x = subprocess.run(["mkdir", "-p", os.path.join("./build", "assets")], capture_output=True)
-    y = subprocess.run(["cp", "-r", os.path.join("./assets"), os.path.join("./build", "assets")], capture_output=True)
+    y = subprocess.run(["cp", "-r", os.path.join("./assets"), os.path.join("./build")], capture_output=True)
 
 
 @task(clean, dupdate, assets)
@@ -95,6 +93,12 @@ def build():
 def wipe():
     '''wipe downloaded dependencies'''
     shutil.rmtree(os.path.join("./deps"), ignore_errors=True)
+
+@task(build)
+def love2d():
+    os.chdir("./build/")
+    p = subprocess.Popen(["love", "."])
+    p.wait()
 
 
 __DEFAULT__=build
