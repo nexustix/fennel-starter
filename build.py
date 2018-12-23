@@ -100,5 +100,11 @@ def love2d():
     p = subprocess.Popen(["love", "."])
     p.wait()
 
+@task(build)
+def lua():
+    os.chdir("./build/")
+    p = subprocess.Popen(["lua", "main.lua"])
+    p.wait()
+
 
 __DEFAULT__=build
